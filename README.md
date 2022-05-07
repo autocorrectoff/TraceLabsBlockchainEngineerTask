@@ -48,7 +48,7 @@ npx hardhat run scripts/bank_deploy.js --network rinkeby
 ```
 **To fund the reward pool call _fundRewardPool_ as the contract owner**
 
-**Don't forget to put your private key in the private_key.txt file where hardhat.config.js will pull it from or deployment will fail**
+<span style="color:red">**Don't forget to put your private key in the private_key.txt file where hardhat.config.js will pull it from or deployment will fail !!**</span>
 
 ### Running Tests
 ```
