@@ -71,7 +71,7 @@ contract Bank {
             (block.timestamp > (deployedAt + 2 * T)) &&
             (block.timestamp < (deployedAt + 3 * T))
         ) {
-            uint256 reward = (_calculateR1() * totalDeposits) / userDeposit;
+            uint256 reward = _calculateR1() / ((userDeposit * 100) / totalDeposits);
             uint256 userTotalAmount = userDeposit + reward;
             _transferERC20(user, userTotalAmount);
             _addToWithdrawers(user);
@@ -80,16 +80,16 @@ contract Bank {
             (block.timestamp > (deployedAt + 3 * T)) &&
             (block.timestamp < (deployedAt + 4 * T))
         ) {
-            uint256 reward1 = (_calculateR1() * totalDeposits) / userDeposit;
-            uint256 reward2 = (_calculateR2() * totalDeposits) / userDeposit;
+            uint256 reward1 = _calculateR1() / ((userDeposit * 100) / totalDeposits);
+            uint256 reward2 = _calculateR2() / ((userDeposit * 100) / totalDeposits);
             uint256 userTotalAmount = userDeposit + reward1 + reward2;
             _transferERC20(user, userTotalAmount);
             _addToWithdrawers(user);
             deposits[user] -= userDeposit;
         } else if (block.timestamp > (deployedAt + 4 * T)) {
-            uint256 reward1 = (_calculateR1() * totalDeposits) / userDeposit;
-            uint256 reward2 = (_calculateR2() * totalDeposits) / userDeposit;
-            uint256 reward3 = (_calculateR3() * totalDeposits) / userDeposit;
+            uint256 reward1 = _calculateR1() / ((userDeposit * 100) / totalDeposits);
+            uint256 reward2 = _calculateR2() / ((userDeposit * 100) / totalDeposits);
+            uint256 reward3 = _calculateR3() / ((userDeposit * 100) / totalDeposits);
             uint256 userTotalAmount = userDeposit + reward1 + reward2 + reward3;
             _transferERC20(user, userTotalAmount);
             _addToWithdrawers(user);
@@ -135,11 +135,13 @@ contract Bank {
 
     // 30% of the reward pool
     function _calculateR2() private view returns (uint256) {
+        console.log("R2 in action");
         return (rewardPool / 100) * 30;
     }
 
     // 50% of the reward pool
     function _calculateR3() private view returns (uint256) {
+        console.log("R3 in action");
         return (rewardPool / 100) * 50;
     }
 
