@@ -17,6 +17,7 @@ const contractABI = [
   "function deposit(uint256 amount)",
   "function withdraw()",
   "function fundRewardPool(uint256 amount)",
+  "function ownerWithdraw()",
 ];
 
 // Accounts 0, 1 and 2 from Hardhat console
@@ -39,7 +40,7 @@ const accounts = {
 };
 
 describe("Bank", function () {
-  xit("Should be locked for deposits after initial deposit period", async function () {
+  it("Should be locked for deposits after initial deposit period", async function () {
     const tokenAddress = await deployTokenContract();
 
     const bankAddress = await deployBankContract(tokenAddress, 5 * 60);
@@ -77,14 +78,13 @@ describe("Bank", function () {
       await bankContract.deposit(amount, {
         gasLimit: 100000,
       });
-      errorMessage = null;
     } catch (err) {
       errorMessage = err.toString();
     }
     expect(errorMessage).to.contain("Deposit period has expired");
   });
 
-  xit("Should be possible to withdrawal before the lock period", async () => {
+  it("Should be possible to withdrawal before the lock period", async () => {
     const tokenAddress = await deployTokenContract();
 
     const bankAddress = await deployBankContract(tokenAddress, 5 * 60);
@@ -110,7 +110,7 @@ describe("Bank", function () {
     expect(newBalance).eq(amount.add(balance));
   });
 
-  xit("Should be locked for withdrawals during the lock period", async () => {
+  it("Should be locked for withdrawals during the lock period", async () => {
     const tokenAddress = await deployTokenContract();
     const T = 5 * 60;
     const bankAddress = await deployBankContract(tokenAddress, T);
@@ -138,7 +138,6 @@ describe("Bank", function () {
       await bankContract.withdraw({
         gasLimit: 100000,
       });
-      errorMessage = null;
     } catch (err) {
       errorMessage = err.toString();
     }
@@ -148,7 +147,7 @@ describe("Bank", function () {
     expect(errorMessage).to.contain("Asset lock period is still in effect");
   });
 
-  xit("Should be opened for withdrawals after the lock period", async () => {
+  it("Should be opened for withdrawals after the lock period", async () => {
     const tokenAddress = await deployTokenContract();
     const T = 5 * 60;
     const bankAddress = await deployBankContract(tokenAddress, T);
@@ -178,7 +177,7 @@ describe("Bank", function () {
     expect(newBalance).eq(amount.add(balance));
   });
 
-  xit("Should allow contract owner to fund reward pool", async () => {
+  it("Should allow contract owner to fund reward pool", async () => {
     const tokenAddress = await deployTokenContract();
     const bankAddress = await deployBankContract(tokenAddress, 5 * 60);
 
@@ -203,7 +202,7 @@ describe("Bank", function () {
     expect(newBalance).eq(balance.add(amount));
   });
 
-  it("Should withdraw correct amount for t0+2T to t0+3T withdrawal period", async() => {
+  it("Should withdraw correct amount for t0+2T to t0+3T withdrawal period", async () => {
     // Deploying Contracts
     const tokenAddress = await deployTokenContract();
     const T = 5 * 60;
@@ -283,15 +282,19 @@ describe("Bank", function () {
     });
     const actualBalance = await token1.balanceOf(accounts.one.address);
 
-    const ratioInTotal = Math.floor(parseInt(address1Deposit) / (parseInt(address1Deposit) + parseInt(address2Deposit)) * 100);
+    const ratioInTotal = Math.floor(
+      (parseInt(address1Deposit) /
+        (parseInt(address1Deposit) + parseInt(address2Deposit))) *
+        100
+    );
     const R1 = 0.2 * parseInt(reward);
-    let withdrewed = (R1 / ratioInTotal) + parseInt(address1Deposit);
+    let withdrewed = R1 / ratioInTotal + parseInt(address1Deposit);
     withdrewed = utils.parseUnits(withdrewed.toString(), 18);
-    
+
     expect(actualBalance).eq(withdrewed.add(remainingBalance));
   });
 
-  it("Should withdraw correct amount for t0+3T to t0+4T withdrawal period", async() => {
+  it("Should withdraw correct amount for t0+3T to t0+4T withdrawal period", async () => {
     // Deploying Contracts
     const tokenAddress = await deployTokenContract();
     const T = 5 * 60;
@@ -371,16 +374,21 @@ describe("Bank", function () {
     });
     const actualBalance = await token1.balanceOf(accounts.one.address);
 
-    const ratioInTotal = Math.floor(parseInt(address1Deposit) / (parseInt(address1Deposit) + parseInt(address2Deposit)) * 100);
+    const ratioInTotal = Math.floor(
+      (parseInt(address1Deposit) /
+        (parseInt(address1Deposit) + parseInt(address2Deposit))) *
+        100
+    );
     const R1 = 0.2 * parseInt(reward);
     const R2 = 0.3 * parseInt(reward);
-    let withdrewed = (R1 / ratioInTotal) + (R2 / ratioInTotal) + parseInt(address1Deposit);
+    let withdrewed =
+      R1 / ratioInTotal + R2 / ratioInTotal + parseInt(address1Deposit);
     withdrewed = utils.parseUnits(withdrewed.toString(), 18);
 
     expect(actualBalance).eq(withdrewed.add(remainingBalance));
   });
 
-  it("Should withdraw correct amount for t0+4T and higher withdrawal period", async() => {
+  it("Should withdraw correct amount for t0+4T and higher withdrawal period", async () => {
     // Deploying Contracts
     const tokenAddress = await deployTokenContract();
     const T = 5 * 60;
@@ -460,16 +468,307 @@ describe("Bank", function () {
     });
     const actualBalance = await token1.balanceOf(accounts.one.address);
 
-    const ratioInTotal = Math.floor(parseInt(address1Deposit) / (parseInt(address1Deposit) + parseInt(address2Deposit)) * 100);
+    const ratioInTotal = Math.floor(
+      (parseInt(address1Deposit) /
+        (parseInt(address1Deposit) + parseInt(address2Deposit))) *
+        100
+    );
     const R1 = 0.2 * parseInt(reward);
     const R2 = 0.3 * parseInt(reward);
     const R3 = 0.5 * parseInt(reward);
-    let withdrewed = (R1 / ratioInTotal) + (R2 / ratioInTotal) + (R3 / ratioInTotal) + parseInt(address1Deposit);
+    let withdrewed =
+      R1 / ratioInTotal +
+      R2 / ratioInTotal +
+      R3 / ratioInTotal +
+      parseInt(address1Deposit);
     withdrewed = utils.parseUnits(withdrewed.toString(), 18);
 
     expect(actualBalance).eq(withdrewed.add(remainingBalance));
   });
 
+  it("Should be possible for contract owner to withdraw remaining from reward pool if no users remained and t0+4T has passed", async () => {
+    // Deploying Contracts
+    const tokenAddress = await deployTokenContract();
+    const T = 5 * 60;
+    const bankAddress = await deployBankContract(tokenAddress, T);
+
+    // Connect to Token Contract as owner and approve amount
+    const reward = "1000";
+    let amount = utils.parseUnits(reward, 18);
+    const token0 = await initTokenContract(
+      accounts.zero.privateKey,
+      tokenAddress
+    );
+    let approveTx = await token0.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Connect to Bank Contract as owner
+    const bankContract0 = await initBankContract(
+      accounts.zero.privateKey,
+      bankAddress
+    );
+
+    // Owner funds the reward pool
+    await bankContract0.fundRewardPool(amount, {
+      gasLimit: 100000,
+    });
+
+    // Address 1 connects to Token Contract and approves amount
+    const address1Deposit = "100";
+    amount = utils.parseUnits(address1Deposit, 18);
+    const token1 = await initTokenContract(
+      accounts.one.privateKey,
+      tokenAddress
+    );
+    approveTx = await token1.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Address 1 connects to Bank Contract
+    const bankContract1 = await initBankContract(
+      accounts.one.privateKey,
+      bankAddress
+    );
+
+    // Address 1 deposits amount
+    let depositTx = await bankContract1.deposit(amount, {
+      gasLimit: 200000,
+    });
+    await depositTx.wait(1);
+
+    // Address 2 connects to Token Contract and approves amount
+    const address2Deposit = "500";
+    amount = utils.parseUnits(address2Deposit, 18);
+    const token2 = await initTokenContract(
+      accounts.two.privateKey,
+      tokenAddress
+    );
+    approveTx = await token2.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Address 2 connects to Bank Contract
+    const bankContract2 = await initBankContract(
+      accounts.two.privateKey,
+      bankAddress
+    );
+
+    // Address 2 deposits amount
+    depositTx = await bankContract2.deposit(amount, {
+      gasLimit: 200000,
+    });
+    await depositTx.wait(1);
+
+    const balance = await token0.balanceOf(accounts.zero.address);
+    await increaseBlockTime(4 * T);
+
+    // Address 1 withdraws the deposit
+    await bankContract1.withdraw({
+      gasLimit: 200000,
+    });
+
+    // Address 2 withdraws the deposit
+    await bankContract2.withdraw({
+      gasLimit: 200000,
+    });
+
+    await bankContract0.ownerWithdraw({
+      gasLimit: 200000,
+    });
+
+    const newBalance = await token0.balanceOf(accounts.zero.address);
+    expect(newBalance.gt(balance)).to.be.true;
+
+    const remainingContractBalance = await token0.balanceOf(bankAddress);
+    expect(remainingContractBalance.toString()).eq("0");
+  });
+
+  it("Should fail for contract owner withdraw if t0+4T hasn't passed", async () => {
+    // Deploying Contracts
+    const tokenAddress = await deployTokenContract();
+    const T = 5 * 60;
+    const bankAddress = await deployBankContract(tokenAddress, T);
+
+    // Connect to Token Contract as owner and approve amount
+    const reward = "1000";
+    let amount = utils.parseUnits(reward, 18);
+    const token0 = await initTokenContract(
+      accounts.zero.privateKey,
+      tokenAddress
+    );
+    let approveTx = await token0.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Connect to Bank Contract as owner
+    const bankContract0 = await initBankContract(
+      accounts.zero.privateKey,
+      bankAddress
+    );
+
+    // Owner funds the reward pool
+    await bankContract0.fundRewardPool(amount, {
+      gasLimit: 100000,
+    });
+
+    // Address 1 connects to Token Contract and approves amount
+    const address1Deposit = "100";
+    amount = utils.parseUnits(address1Deposit, 18);
+    const token1 = await initTokenContract(
+      accounts.one.privateKey,
+      tokenAddress
+    );
+    approveTx = await token1.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Address 1 connects to Bank Contract
+    const bankContract1 = await initBankContract(
+      accounts.one.privateKey,
+      bankAddress
+    );
+
+    // Address 1 deposits amount
+    let depositTx = await bankContract1.deposit(amount, {
+      gasLimit: 200000,
+    });
+    await depositTx.wait(1);
+
+    // Address 2 connects to Token Contract and approves amount
+    const address2Deposit = "500";
+    amount = utils.parseUnits(address2Deposit, 18);
+    const token2 = await initTokenContract(
+      accounts.two.privateKey,
+      tokenAddress
+    );
+    approveTx = await token2.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Address 2 connects to Bank Contract
+    const bankContract2 = await initBankContract(
+      accounts.two.privateKey,
+      bankAddress
+    );
+
+    // Address 2 deposits amount
+    depositTx = await bankContract2.deposit(amount, {
+      gasLimit: 200000,
+    });
+    await depositTx.wait(1);
+
+    await increaseBlockTime(3 * T);
+
+    // Address 1 withdraws the deposit
+    await bankContract1.withdraw({
+      gasLimit: 200000,
+    });
+
+    // Address 2 withdraws the deposit
+    await bankContract2.withdraw({
+      gasLimit: 200000,
+    });
+
+    let errorMessage;
+    try {
+      await bankContract0.ownerWithdraw({
+        gasLimit: 200000,
+      });
+    } catch (err) {
+      errorMessage = err.toString();
+    }
+
+    expect(errorMessage).to.contain(
+      "Not all users withdrew their funds or lock period hasn't expired"
+    );
+  });
+
+  it("Should fail for contract owner withdraw if not all users withdrew their deposits", async () => {
+    // Deploying Contracts
+    const tokenAddress = await deployTokenContract();
+    const T = 5 * 60;
+    const bankAddress = await deployBankContract(tokenAddress, T);
+
+    // Connect to Token Contract as owner and approve amount
+    const reward = "1000";
+    let amount = utils.parseUnits(reward, 18);
+    const token0 = await initTokenContract(
+      accounts.zero.privateKey,
+      tokenAddress
+    );
+    let approveTx = await token0.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Connect to Bank Contract as owner
+    const bankContract0 = await initBankContract(
+      accounts.zero.privateKey,
+      bankAddress
+    );
+
+    // Owner funds the reward pool
+    await bankContract0.fundRewardPool(amount, {
+      gasLimit: 100000,
+    });
+
+    // Address 1 connects to Token Contract and approves amount
+    const address1Deposit = "100";
+    amount = utils.parseUnits(address1Deposit, 18);
+    const token1 = await initTokenContract(
+      accounts.one.privateKey,
+      tokenAddress
+    );
+    approveTx = await token1.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Address 1 connects to Bank Contract
+    const bankContract1 = await initBankContract(
+      accounts.one.privateKey,
+      bankAddress
+    );
+
+    // Address 1 deposits amount
+    let depositTx = await bankContract1.deposit(amount, {
+      gasLimit: 200000,
+    });
+    await depositTx.wait(1);
+
+    // Address 2 connects to Token Contract and approves amount
+    const address2Deposit = "500";
+    amount = utils.parseUnits(address2Deposit, 18);
+    const token2 = await initTokenContract(
+      accounts.two.privateKey,
+      tokenAddress
+    );
+    approveTx = await token2.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Address 2 connects to Bank Contract
+    const bankContract2 = await initBankContract(
+      accounts.two.privateKey,
+      bankAddress
+    );
+
+    // Address 2 deposits amount
+    depositTx = await bankContract2.deposit(amount, {
+      gasLimit: 200000,
+    });
+    await depositTx.wait(1);
+
+    await increaseBlockTime(4 * T);
+
+    // Only Address 1 withdraws the deposit
+    await bankContract1.withdraw({
+      gasLimit: 200000,
+    });
+
+    let errorMessage;
+    try {
+      await bankContract0.ownerWithdraw({
+        gasLimit: 200000,
+      });
+    } catch (err) {
+      errorMessage = err.toString();
+    }
+
+    expect(errorMessage).to.contain(
+      "Not all users withdrew their funds or lock period hasn't expired"
+    );
+  });
 });
 
 const deployBankContract = async (tokenAddress, seconds) => {
