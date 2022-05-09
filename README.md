@@ -37,7 +37,7 @@ npx hardhat run scripts/bank_deploy.js --network localhost
 
 ### Rinkeby
 **To deploy Test Token Contract to Rinkeby run**
-**(you dont have to do this if you wish to use an existing token)**
+**(you don't have to do this if you wish to use an existing token)**
 ```
 npx hardhat run scripts/testERC20Token_deploy.js --network rinkeby
 ```
