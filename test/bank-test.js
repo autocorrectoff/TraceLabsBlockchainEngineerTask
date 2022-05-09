@@ -291,6 +291,185 @@ describe("Bank", function () {
     expect(actualBalance).eq(withdrewed.add(remainingBalance));
   });
 
+  it("Should withdraw correct amount for t0+3T to t0+4T withdrawal period", async() => {
+    // Deploying Contracts
+    const tokenAddress = await deployTokenContract();
+    const T = 5 * 60;
+    const bankAddress = await deployBankContract(tokenAddress, T);
+
+    // Connect to Token Contract as owner and approve amount
+    const reward = "1000";
+    let amount = utils.parseUnits(reward, 18);
+    const token0 = await initTokenContract(
+      accounts.zero.privateKey,
+      tokenAddress
+    );
+    let approveTx = await token0.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Connect to Bank Contract as owner
+    const bankContract0 = await initBankContract(
+      accounts.zero.privateKey,
+      bankAddress
+    );
+
+    // Owner funds the reward pool
+    await bankContract0.fundRewardPool(amount, {
+      gasLimit: 100000,
+    });
+
+    // Address 1 connects to Token Contract and approves amount
+    const address1Deposit = "100";
+    amount = utils.parseUnits(address1Deposit, 18);
+    const token1 = await initTokenContract(
+      accounts.one.privateKey,
+      tokenAddress
+    );
+    approveTx = await token1.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Address 1 connects to Bank Contract
+    const bankContract1 = await initBankContract(
+      accounts.one.privateKey,
+      bankAddress
+    );
+
+    // Address 1 deposits amount
+    let depositTx = await bankContract1.deposit(amount, {
+      gasLimit: 200000,
+    });
+    await depositTx.wait(1);
+
+    // Address 2 connects to Token Contract and approves amount
+    const address2Deposit = "500";
+    amount = utils.parseUnits(address2Deposit, 18);
+    const token2 = await initTokenContract(
+      accounts.two.privateKey,
+      tokenAddress
+    );
+    approveTx = await token2.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Address 2 connects to Bank Contract
+    const bankContract2 = await initBankContract(
+      accounts.two.privateKey,
+      bankAddress
+    );
+
+    // Address 2 deposits amount
+    depositTx = await bankContract2.deposit(amount, {
+      gasLimit: 200000,
+    });
+    await depositTx.wait(1);
+
+    const remainingBalance = await token1.balanceOf(accounts.one.address);
+    await increaseBlockTime(3 * T);
+
+    // Address 1 withdraws the deposit
+    await bankContract1.withdraw({
+      gasLimit: 200000,
+    });
+    const actualBalance = await token1.balanceOf(accounts.one.address);
+
+    const ratioInTotal = Math.floor(parseInt(address1Deposit) / (parseInt(address1Deposit) + parseInt(address2Deposit)) * 100);
+    const R1 = 0.2 * parseInt(reward);
+    const R2 = 0.3 * parseInt(reward);
+    let withdrewed = (R1 / ratioInTotal) + (R2 / ratioInTotal) + parseInt(address1Deposit);
+    withdrewed = utils.parseUnits(withdrewed.toString(), 18);
+
+    expect(actualBalance).eq(withdrewed.add(remainingBalance));
+  });
+
+  it("Should withdraw correct amount for t0+4T and higher withdrawal period", async() => {
+    // Deploying Contracts
+    const tokenAddress = await deployTokenContract();
+    const T = 5 * 60;
+    const bankAddress = await deployBankContract(tokenAddress, T);
+
+    // Connect to Token Contract as owner and approve amount
+    const reward = "1000";
+    let amount = utils.parseUnits(reward, 18);
+    const token0 = await initTokenContract(
+      accounts.zero.privateKey,
+      tokenAddress
+    );
+    let approveTx = await token0.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Connect to Bank Contract as owner
+    const bankContract0 = await initBankContract(
+      accounts.zero.privateKey,
+      bankAddress
+    );
+
+    // Owner funds the reward pool
+    await bankContract0.fundRewardPool(amount, {
+      gasLimit: 100000,
+    });
+
+    // Address 1 connects to Token Contract and approves amount
+    const address1Deposit = "100";
+    amount = utils.parseUnits(address1Deposit, 18);
+    const token1 = await initTokenContract(
+      accounts.one.privateKey,
+      tokenAddress
+    );
+    approveTx = await token1.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Address 1 connects to Bank Contract
+    const bankContract1 = await initBankContract(
+      accounts.one.privateKey,
+      bankAddress
+    );
+
+    // Address 1 deposits amount
+    let depositTx = await bankContract1.deposit(amount, {
+      gasLimit: 200000,
+    });
+    await depositTx.wait(1);
+
+    // Address 2 connects to Token Contract and approves amount
+    const address2Deposit = "500";
+    amount = utils.parseUnits(address2Deposit, 18);
+    const token2 = await initTokenContract(
+      accounts.two.privateKey,
+      tokenAddress
+    );
+    approveTx = await token2.approve(bankAddress, amount);
+    await approveTx.wait(1);
+
+    // Address 2 connects to Bank Contract
+    const bankContract2 = await initBankContract(
+      accounts.two.privateKey,
+      bankAddress
+    );
+
+    // Address 2 deposits amount
+    depositTx = await bankContract2.deposit(amount, {
+      gasLimit: 200000,
+    });
+    await depositTx.wait(1);
+
+    const remainingBalance = await token1.balanceOf(accounts.one.address);
+    await increaseBlockTime(4 * T);
+
+    // Address 1 withdraws the deposit
+    await bankContract1.withdraw({
+      gasLimit: 200000,
+    });
+    const actualBalance = await token1.balanceOf(accounts.one.address);
+
+    const ratioInTotal = Math.floor(parseInt(address1Deposit) / (parseInt(address1Deposit) + parseInt(address2Deposit)) * 100);
+    const R1 = 0.2 * parseInt(reward);
+    const R2 = 0.3 * parseInt(reward);
+    const R3 = 0.5 * parseInt(reward);
+    let withdrewed = (R1 / ratioInTotal) + (R2 / ratioInTotal) + (R3 / ratioInTotal) + parseInt(address1Deposit);
+    withdrewed = utils.parseUnits(withdrewed.toString(), 18);
+
+    expect(actualBalance).eq(withdrewed.add(remainingBalance));
+  });
+
 });
 
 const deployBankContract = async (tokenAddress, seconds) => {
