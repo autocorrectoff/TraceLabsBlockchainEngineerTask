@@ -11,7 +11,16 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   }
 });
 
-const privateKey = readFileSync("private_key.txt", "utf-8");
+let privateKey;
+try {
+  privateKey = readFileSync("private_key.txt", "utf-8");
+} catch (err) {
+  console.error(
+    "\x1b[31m",
+    "Whooops! We can't do this without a private key. Did you remember to create a private_key.txt file and place a private key inside?"
+  );
+  process.exit(1);
+}
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
